@@ -1,4 +1,4 @@
-// Copyright 2007-2023 The Mumble Developers. All rights reserved.
+// Copyright The Mumble Developers. All rights reserved.
 // Use of this source code is governed by a BSD-style license
 // that can be found in the LICENSE file at the root of the
 // Mumble source tree or at <https://www.mumble.info/LICENSE>.
@@ -35,9 +35,7 @@
 #	include <sys/resource.h>
 #endif
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
-#	include <QRandomGenerator>
-#endif
+#include <QRandomGenerator>
 
 MetaParams Meta::mp;
 
@@ -70,7 +68,6 @@ MetaParams::MetaParams() {
 	qsDatabase                 = QString();
 	iSQLiteWAL                 = 0;
 	iDBPort                    = 0;
-	qsDBusService              = "net.sourceforge.mumble.murmur";
 	qsDBDriver                 = "QSQLITE";
 	qsLogfile                  = "mumble-server.log";
 
@@ -97,8 +94,8 @@ MetaParams::MetaParams() {
 	iChannelNestingLimit = 10;
 	iChannelCountLimit   = 1000;
 
-	qrUserName    = QRegExp(QLatin1String("[ -=\\w\\[\\]\\{\\}\\(\\)\\@\\|\\.]+"));
-	qrChannelName = QRegExp(QLatin1String("[ -=\\w\\#\\[\\]\\{\\}\\(\\)\\@\\|]+"));
+	qrUserName    = QRegularExpression(QLatin1String("[ -=\\w\\[\\]\\{\\}\\(\\)\\@\\|\\.]+"));
+	qrChannelName = QRegularExpression(QLatin1String("[ -=\\w\\#\\[\\]\\{\\}\\(\\)\\@\\|]+"));
 
 	iMessageLimit = 1;
 	iMessageBurst = 5;
@@ -149,7 +146,7 @@ ReturnType MetaParams::typeCheckedFromSettings(const QString &name, const ValueT
 
 	// Bit convoluted as canConvert<T>() only does a static check without considering whether
 	// say a string like "blub" is actually a valid double (which convert does).
-	if (!cfgVariable.convert(static_cast< int >(QVariant(defaultValue).type()))) {
+	if (!cfgVariable.convert(QMetaType(QVariant(defaultValue).metaType()))) {
 		qCritical() << "Configuration variable" << name << "is of invalid format. Set to default value of"
 					<< defaultValue << ".";
 		return static_cast< ReturnType >(defaultValue);
@@ -165,7 +162,7 @@ void MetaParams::read(QString fname) {
 		QStringList datapaths;
 
 #if defined(Q_OS_WIN)
-		datapaths << QStandardPaths::writableLocation(QStandardPaths::DataLocation);
+		datapaths << QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
 
 		QDir appdir = QDir(QDir::fromNativeSeparators(EnvUtils::getenv(QLatin1String("APPDATA"))));
 		datapaths << appdir.absolutePath() + QLatin1String("/Mumble");
@@ -213,7 +210,6 @@ void MetaParams::read(QString fname) {
 	}
 	QDir::setCurrent(qdBasePath.absolutePath());
 	qsSettings = new QSettings(qsAbsSettingsFilePath, QSettings::IniFormat);
-	qsSettings->setIniCodec("UTF-8");
 
 	qsSettings->sync();
 	switch (qsSettings->status()) {
@@ -237,12 +233,7 @@ void MetaParams::read(QString fname) {
 
 	QString qsHost = qsSettings->value("host", QString()).toString();
 	if (!qsHost.isEmpty()) {
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
-		foreach (const QString &host, qsHost.split(QRegExp(QLatin1String("\\s+")), Qt::SkipEmptyParts)) {
-#else
-		// Qt 5.14 introduced the Qt::SplitBehavior flags deprecating the QString fields
-		foreach (const QString &host, qsHost.split(QRegExp(QLatin1String("\\s+")), QString::SkipEmptyParts)) {
-#endif
+		foreach (const QString &host, qsHost.split(QRegularExpression(QLatin1String("\\s+")), Qt::SkipEmptyParts)) {
 			QHostAddress qhaddr;
 			if (qhaddr.setAddress(host)) {
 				qlBind << qhaddr;
@@ -308,10 +299,8 @@ void MetaParams::read(QString fname) {
 
 	iLogDays = typeCheckedFromSettings("logdays", iLogDays);
 
-	qsDBus        = typeCheckedFromSettings("dbus", qsDBus);
-	qsDBusService = typeCheckedFromSettings("dbusservice", qsDBusService);
-	qsLogfile     = typeCheckedFromSettings("logfile", qsLogfile);
-	qsPid         = typeCheckedFromSettings("pidfile", qsPid);
+	qsLogfile = typeCheckedFromSettings("logfile", qsLogfile);
+	qsPid     = typeCheckedFromSettings("pidfile", qsPid);
 
 	qsRegName     = typeCheckedFromSettings("registerName", qsRegName);
 	qsRegPassword = typeCheckedFromSettings("registerPassword", qsRegPassword);
@@ -367,8 +356,8 @@ void MetaParams::read(QString fname) {
 	}
 #endif
 
-	qrUserName    = QRegExp(typeCheckedFromSettings("username", qrUserName.pattern()));
-	qrChannelName = QRegExp(typeCheckedFromSettings("channelname", qrChannelName.pattern()));
+	qrUserName    = QRegularExpression(typeCheckedFromSettings("username", qrUserName.pattern()));
+	qrChannelName = QRegularExpression(typeCheckedFromSettings("channelname", qrChannelName.pattern()));
 
 	iMessageLimit = typeCheckedFromSettings< unsigned int >("messagelimit", 1);
 	iMessageBurst = typeCheckedFromSettings< unsigned int >("messageburst", 5);
@@ -381,12 +370,7 @@ void MetaParams::read(QString fname) {
 	bool bObfuscate = typeCheckedFromSettings("obfuscate", false);
 	if (bObfuscate) {
 		qWarning("IP address obfuscation enabled.");
-#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
 		iObfuscate = static_cast< int >(QRandomGenerator::global()->generate());
-#else
-		// Qt 5.10 introduces the QRandomGenerator class and in Qt 5.15 qrand got deprecated in its favor
-		iObfuscate = static_cast< int >(qrand());
-#endif
 	}
 	bSendVersion = typeCheckedFromSettings("sendversion", bSendVersion);
 	bAllowPing   = typeCheckedFromSettings("allowping", bAllowPing);
@@ -441,7 +425,6 @@ void MetaParams::read(QString fname) {
 
 bool MetaParams::loadSSLSettings() {
 	QSettings updatedSettings(qsAbsSettingsFilePath, QSettings::IniFormat);
-	updatedSettings.setIniCodec("UTF-8");
 
 	QString tmpCiphersStr = typeCheckedFromSettings("sslCiphers", qsCiphers);
 
@@ -531,7 +514,8 @@ bool MetaParams::loadSSLSettings() {
 		}
 		if (ql.size() > 0) {
 			tmpIntermediates = ql;
-			qCritical("MetaParams: Adding %d intermediate certificates from certificate file.", ql.size());
+			qCritical("MetaParams: Adding %lld intermediate certificates from certificate file.",
+					  static_cast< qsizetype >(ql.size()));
 		}
 	}
 

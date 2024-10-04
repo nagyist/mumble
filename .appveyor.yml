@@ -1,4 +1,4 @@
-# Copyright 2021-2023 The Mumble Developers. All rights reserved.
+# Copyright The Mumble Developers. All rights reserved.
 # Use of this source code is governed by a BSD-style license
 # that can be found in the LICENSE file at the root of the
 # Mumble source tree or at <https://www.mumble.info/LICENSE>.
@@ -23,7 +23,7 @@ environment:
 
   matrix:
     - MUMBLE_ENVIRONMENT_TRIPLET: 'x64-windows-static-md-release'
-      MUMBLE_ENVIRONMENT_VERSION: 'mumble_env.x64-windows-static-md-release.2023-12-31.6a3ce9c65'
+      MUMBLE_ENVIRONMENT_VERSION: 'mumble_env.x64-windows-static-md-release.2024-07-22.9ad0398d8'
 
 install:
   - ps: .ci/install-environment_windows.ps1

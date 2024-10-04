@@ -1,4 +1,4 @@
-// Copyright 2013-2023 The Mumble Developers. All rights reserved.
+// Copyright The Mumble Developers. All rights reserved.
 // Use of this source code is governed by a BSD-style license
 // that can be found in the LICENSE file at the root of the
 // Mumble source tree or at <https://www.mumble.info/LICENSE>.
@@ -34,7 +34,7 @@ int UserListModel::rowCount(const QModelIndex &parentIndex) const {
 	if (parentIndex.isValid())
 		return 0;
 
-	return m_userList.size();
+	return static_cast< int >(m_userList.size());
 }
 
 int UserListModel::columnCount(const QModelIndex &parentIndex) const {

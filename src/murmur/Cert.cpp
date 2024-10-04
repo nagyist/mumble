@@ -1,4 +1,4 @@
-// Copyright 2007-2023 The Mumble Developers. All rights reserved.
+// Copyright The Mumble Developers. All rights reserved.
 // Use of this source code is governed by a BSD-style license
 // that can be found in the LICENSE file at the root of the
 // Mumble source tree or at <https://www.mumble.info/LICENSE>.
@@ -32,12 +32,12 @@ bool Server::isKeyForCert(const QSslKey &key, const QSslCertificate &cert) {
 	EVP_PKEY *pkey = nullptr;
 	BIO *mem       = nullptr;
 
-	mem = BIO_new_mem_buf(qbaKey.data(), qbaKey.size());
+	mem = BIO_new_mem_buf(qbaKey.data(), static_cast< int >(qbaKey.size()));
 	Q_UNUSED(BIO_set_close(mem, BIO_NOCLOSE));
 	pkey = d2i_PrivateKey_bio(mem, nullptr);
 	BIO_free(mem);
 
-	mem = BIO_new_mem_buf(qbaCert.data(), qbaCert.size());
+	mem = BIO_new_mem_buf(qbaCert.data(), static_cast< int >(qbaCert.size()));
 	Q_UNUSED(BIO_set_close(mem, BIO_NOCLOSE));
 	x509 = d2i_X509_bio(mem, nullptr);
 	BIO_free(mem);
@@ -61,10 +61,8 @@ QSslKey Server::privateKeyFromPEM(const QByteArray &buf, const QByteArray &pass)
 	key = QSslKey(buf, QSsl::Rsa, QSsl::Pem, QSsl::PrivateKey, pass);
 	if (key.isNull())
 		key = QSslKey(buf, QSsl::Dsa, QSsl::Pem, QSsl::PrivateKey, pass);
-#if QT_VERSION >= 0x050500
 	if (key.isNull())
 		key = QSslKey(buf, QSsl::Ec, QSsl::Pem, QSsl::PrivateKey, pass);
-#endif
 	return key;
 }
 

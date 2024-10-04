@@ -1,4 +1,4 @@
-// Copyright 2007-2023 The Mumble Developers. All rights reserved.
+// Copyright The Mumble Developers. All rights reserved.
 // Use of this source code is governed by a BSD-style license
 // that can be found in the LICENSE file at the root of the
 // Mumble source tree or at <https://www.mumble.info/LICENSE>.
@@ -24,12 +24,12 @@
 
 #include <QSignalBlocker>
 #include <QtCore/QMutexLocker>
+#include <QtCore/QRegularExpression>
 #include <QtGui/QImageWriter>
 #include <QtGui/QScreen>
 #include <QtGui/QTextBlock>
 #include <QtGui/QTextDocumentFragment>
 #include <QtNetwork/QNetworkReply>
-#include <QtWidgets/QDesktopWidget>
 
 const QString LogConfig::name = QLatin1String("LogConfig");
 
@@ -707,6 +707,15 @@ QString Log::validHtml(const QString &html, QTextCursor *tc) {
 
 void Log::log(MsgType mt, const QString &console, const QString &terse, bool ownMessage, const QString &overrideTTS,
 			  bool ignoreTTS) {
+	if (QThread::currentThread() != thread()) {
+		// Invoke in main thread in order to keep the Qt gods on our side by not calling any UI
+		// functions from a separate thread (can lead to program crashes)
+		QMetaObject::invokeMethod(this, "log", Qt::QueuedConnection, Q_ARG(Log::MsgType, mt),
+								  Q_ARG(const QString &, console), Q_ARG(const QString &, terse),
+								  Q_ARG(bool, ownMessage), Q_ARG(const QString &, overrideTTS), Q_ARG(bool, ignoreTTS));
+		return;
+	}
+
 	QDateTime dt = QDateTime::currentDateTime();
 
 	int ignore = qmIgnore.value(mt);
@@ -771,7 +780,7 @@ void Log::log(MsgType mt, const QString &console, const QString &terse, bool own
 		QString fixedNLPlain =
 			plain.replace(QLatin1String("\r\n"), QLatin1String("\n")).replace(QLatin1String("\r"), QLatin1String("\n"));
 
-		if (fixedNLPlain.contains(QRegExp(QLatin1String("\\n[ \\t]*$")))) {
+		if (fixedNLPlain.contains(QRegularExpression(QLatin1String("\\n[ \\t]*$")))) {
 			// If the message ends with one or more blank lines (or lines only containing whitespace)
 			// paint a border around the message to make clear that it contains invisible parts.
 			// The beginning of the message is clear anyway (the date and potentially the "To XY" part)
@@ -819,7 +828,7 @@ void Log::log(MsgType mt, const QString &console, const QString &terse, bool own
 		}
 
 		// Message notification with static sounds
-		int connectedUsers = 0;
+		qsizetype connectedUsers = 0;
 		{
 			QReadLocker lock(&ClientUser::c_qrwlUsers);
 			connectedUsers = ClientUser::c_qmUsers.size();
@@ -849,18 +858,19 @@ void Log::log(MsgType mt, const QString &console, const QString &terse, bool own
 	}
 
 	// Apply simplifications to spoken text
-	QRegExp identifyURL(QLatin1String("[a-z-]+://[^ <]*"), Qt::CaseInsensitive, QRegExp::RegExp2);
+	const QRegularExpression identifyURL(QRegularExpression::anchoredPattern(QLatin1String("[a-z-]+://[^ <]*")),
+										 QRegularExpression::CaseInsensitiveOption);
 
-	QStringList qslAllowed = allowedSchemes();
+	const QStringList qslAllowed  = allowedSchemes();
+	QRegularExpressionMatch match = identifyURL.match(plain);
+	qsizetype pos                 = 0;
 
-	int pos = 0;
-	while ((pos = identifyURL.indexIn(plain, pos)) != -1) {
-		QUrl url(identifyURL.cap(0).toLower());
-		int len = identifyURL.matchedLength();
+	while (match.hasMatch()) {
+		QUrl url(match.captured(0).toLower());
 		if (url.isValid() && qslAllowed.contains(url.scheme())) {
 			// Replace it appropriately
 			QString replacement;
-			QString host = url.host().replace(QRegExp(QLatin1String("^www.")), QString());
+			QString host = url.host().replace(QRegularExpression(QLatin1String("^www.")), QString());
 
 			if (url.scheme() == QLatin1String("http") || url.scheme() == QLatin1String("https"))
 				replacement = tr("link to %1").arg(host);
@@ -873,10 +883,12 @@ void Log::log(MsgType mt, const QString &console, const QString &terse, bool own
 			else
 				replacement = tr("%1 link").arg(url.scheme());
 
-			plain.replace(pos, len, replacement);
+			plain.replace(pos, match.capturedLength(), replacement);
 		} else {
-			pos += len;
+			pos += match.capturedLength();
 		}
+
+		match = identifyURL.match(plain, pos);
 	}
 
 #ifndef USE_NO_TTS

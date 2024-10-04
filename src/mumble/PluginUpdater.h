@@ -1,4 +1,4 @@
-// Copyright 2021-2023 The Mumble Developers. All rights reserved.
+// Copyright The Mumble Developers. All rights reserved.
 // Use of this source code is governed by a BSD-style license
 // that can be found in the LICENSE file at the root of the
 // Mumble source tree or at <https://www.mumble.info/LICENSE>.
@@ -28,8 +28,6 @@ struct UpdateWidgetPair {
 /// A helper struct to store a pair of a plugin ID  and an URL corresponding to
 /// the same plugin.
 struct UpdateEntry {
-	UpdateEntry() = default;
-
 	plugin_id_t pluginID = std::numeric_limits< plugin_id_t >::max();
 	QUrl updateURL;
 	QString fileName;

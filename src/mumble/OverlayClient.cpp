@@ -1,4 +1,4 @@
-// Copyright 2010-2023 The Mumble Developers. All rights reserved.
+// Copyright The Mumble Developers. All rights reserved.
 // Use of this source code is governed by a BSD-style license
 // that can be found in the LICENSE file at the root of the
 // Mumble source tree or at <https://www.mumble.info/LICENSE>.
@@ -138,14 +138,14 @@ void OverlayClient::updateMouse() {
 		extern QPixmap qt_pixmapFromWinHBITMAP(HBITMAP bitmap, int format = 0);
 
 		if (info.hbmColor) {
-			pm = qt_pixmapFromWinHBITMAP(info.hbmColor);
-			pm.setMask(QBitmap(qt_pixmapFromWinHBITMAP(info.hbmMask)));
+			pm = QBitmap::fromPixmap(qt_pixmapFromWinHBITMAP(info.hbmColor));
+			pm.setMask(QBitmap::fromPixmap(qt_pixmapFromWinHBITMAP(info.hbmMask)));
 		} else {
-			QBitmap orig(qt_pixmapFromWinHBITMAP(info.hbmMask));
-			QImage img = orig.toImage();
+			const auto orig  = QBitmap::fromPixmap(qt_pixmapFromWinHBITMAP(info.hbmMask));
+			const QImage img = orig.toImage();
 
-			int h = img.height() / 2;
-			int w = img.bytesPerLine() / sizeof(quint32);
+			const int h         = img.height() / 2;
+			const std::size_t w = img.bytesPerLine() / sizeof(quint32);
 
 			QImage out(img.width(), h, QImage::Format_MonoLSB);
 			QImage outmask(img.width(), h, QImage::Format_MonoLSB);
@@ -258,7 +258,7 @@ void OverlayClient::showGui() {
 	Global::get().mw->qteChat->setFocus();
 
 	qgv.setAttribute(Qt::WA_WState_Hidden, false);
-	qApp->setActiveWindow(&qgv);
+	qgv.activateWindow();
 	qgv.setFocus();
 
 	ougUsers.bShowExamples = true;
@@ -378,7 +378,7 @@ void OverlayClient::readyReadMsgInit(unsigned int length) {
 	OverlayMsg om;
 	om.omh.uiMagic = OVERLAY_MAGIC_NUMBER;
 	om.omh.uiType  = OVERLAY_MSGTYPE_SHMEM;
-	om.omh.iLength = key.length();
+	om.omh.iLength = static_cast< int >(key.length());
 	Q_ASSERT(sizeof(om.oms.a_cName) >= static_cast< size_t >(key.length())); // Name should be auto-generated and short
 	memcpy(om.oms.a_cName, key.constData(), static_cast< std::size_t >(key.length()));
 	qlsSocket->write(om.headerbuffer, static_cast< int >(sizeof(OverlayMsgHeader)) + om.omh.iLength);

@@ -1,4 +1,4 @@
-// Copyright 2007-2023 The Mumble Developers. All rights reserved.
+// Copyright The Mumble Developers. All rights reserved.
 // Use of this source code is governed by a BSD-style license
 // that can be found in the LICENSE file at the root of the
 // Mumble source tree or at <https://www.mumble.info/LICENSE>.
@@ -26,14 +26,12 @@
 #include <QFileInfo>
 #include <QImageReader>
 #include <QMessageBox>
+#include <QOperatingSystemVersion>
 #include <QProcessEnvironment>
 #include <QRegularExpression>
 #include <QSettings>
 #include <QStandardPaths>
 #include <QSystemTrayIcon>
-#if QT_VERSION >= QT_VERSION_CHECK(5, 9, 0)
-#	include <QOperatingSystemVersion>
-#endif
 
 #include <boost/typeof/typeof.hpp>
 
@@ -87,8 +85,8 @@ bool ShortcutTarget::operator==(const ShortcutTarget &o) const {
 		return (iChannel == o.iChannel) && (bLinks == o.bLinks) && (bChildren == o.bChildren) && (qsGroup == o.qsGroup);
 }
 
-quint32 qHash(const ShortcutTarget &t) {
-	quint32 h = t.bForceCenter ? 0x55555555 : 0xaaaaaaaa;
+std::size_t qHash(const ShortcutTarget &t) {
+	std::size_t h = t.bForceCenter ? 0x55555555 : 0xaaaaaaaa;
 
 	if (t.bCurrentSelection) {
 		h ^= 0x20000000;
@@ -109,8 +107,8 @@ quint32 qHash(const ShortcutTarget &t) {
 	return h;
 }
 
-quint32 qHash(const QList< ShortcutTarget > &l) {
-	quint32 h = static_cast< quint32 >(l.count());
+std::size_t qHash(const QList< ShortcutTarget > &l) {
+	auto h = static_cast< std::size_t >(l.count());
 	foreach (const ShortcutTarget &st, l)
 		h ^= qHash(st);
 	return h;
@@ -397,7 +395,7 @@ bool operator<(const ChannelTarget &lhs, const ChannelTarget &rhs) {
 	return lhs.channelID < rhs.channelID;
 }
 
-quint32 qHash(const ChannelTarget &target) {
+std::size_t qHash(const ChannelTarget &target) {
 	return qHash(target.channelID);
 }
 
@@ -514,16 +512,11 @@ Settings::Settings() {
 	GlobalShortcutWin::registerMetaTypes();
 #endif
 	qRegisterMetaType< ShortcutTarget >("ShortcutTarget");
-	qRegisterMetaTypeStreamOperators< ShortcutTarget >("ShortcutTarget");
 	qRegisterMetaType< ChannelTarget >("ChannelTarget");
-	qRegisterMetaTypeStreamOperators< ChannelTarget >("ChannelTarget");
 	qRegisterMetaType< QVariant >("QVariant");
 	qRegisterMetaType< PluginSetting >("PluginSetting");
-	qRegisterMetaTypeStreamOperators< PluginSetting >("PluginSetting");
 	qRegisterMetaType< Search::SearchDialog::UserAction >("SearchDialog::UserAction");
 	qRegisterMetaType< Search::SearchDialog::ChannelAction >("SearchDialog::ChannelAction");
-
-
 #ifdef Q_OS_MACOS
 	// The echo cancellation feature on macOS is experimental and known to be able to cause problems
 	// (e.g. muting the user instead of only cancelling echo - https://github.com/mumble-voip/mumble/issues/4912)
@@ -532,13 +525,7 @@ Settings::Settings() {
 #endif
 #ifdef Q_OS_WIN
 	// Don't enable minimize to tray by default on Windows >= 7
-#	if QT_VERSION >= QT_VERSION_CHECK(5, 9, 0)
-	// Since Qt 5.9 QOperatingSystemVersion is preferred over QSysInfo::WinVersion
 	bHideInTray = QOperatingSystemVersion::current() < QOperatingSystemVersion::Windows7;
-#	else
-	const QSysInfo::WinVersion winVer = QSysInfo::windowsVersion();
-	bHideInTray                       = (winVer < QSysInfo::WV_WINDOWS7);
-#	endif
 #else
 	const bool isUnityDesktop =
 		QProcessEnvironment::systemEnvironment().value(QLatin1String("XDG_CURRENT_DESKTOP")) == QLatin1String("Unity");
@@ -1112,8 +1099,8 @@ void Settings::legacyLoad(const QString &path) {
 
 		if (pluginKey.contains(QLatin1String("_"))) {
 			// The key contains the filename as well as the hash
-			int index  = pluginKey.lastIndexOf(QLatin1String("_"));
-			pluginHash = pluginKey.right(pluginKey.size() - index - 1);
+			const auto index = pluginKey.lastIndexOf(QLatin1String("_"));
+			pluginHash       = pluginKey.right(pluginKey.size() - index - 1);
 		} else {
 			pluginHash = pluginKey;
 		}
@@ -1278,7 +1265,7 @@ QString Settings::findSettingsLocation(bool legacy, bool *foundExistingFile) con
 	// this path instead of creating a new one (in the location that we currently think is best to use).
 	QStringList paths;
 	paths << QCoreApplication::instance()->applicationDirPath();
-	paths << QStandardPaths::writableLocation(QStandardPaths::DataLocation);
+	paths << QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
 	paths << QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
 	paths << QStandardPaths::writableLocation(QStandardPaths::ConfigLocation);
 	paths << QFileInfo(QSettings().fileName()).dir().absolutePath();

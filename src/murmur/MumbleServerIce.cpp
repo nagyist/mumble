@@ -1,4 +1,4 @@
-// Copyright 2022-2023 The Mumble Developers. All rights reserved.
+// Copyright The Mumble Developers. All rights reserved.
 // Use of this source code is governed by a BSD-style license
 // that can be found in the LICENSE file at the root of the
 // Mumble source tree or at <https://www.mumble.info/LICENSE>.
@@ -124,12 +124,7 @@ static void userToUser(const ::User *p, ::MumbleServer::User &mp) {
 	mp.udpPing          = u->dUDPPingAvg;
 	mp.tcpPing          = u->dTCPPingAvg;
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
 	mp.tcponly = u->aiUdpFlag.loadRelaxed() == 0;
-#else
-	// Qt 5.14 introduced QAtomicInteger::loadRelaxed() which deprecates QAtomicInteger::load()
-	mp.tcponly = u->aiUdpFlag.load() == 0;
-#endif
 
 	::MumbleServer::NetAddress addr(16, 0);
 	for (unsigned int i = 0; i < 16; ++i) {
@@ -181,7 +176,7 @@ static void banToBan(const ::Ban &b, ::MumbleServer::Ban &mb) {
 	mb.name     = iceString(b.qsUsername);
 	mb.hash     = iceString(b.qsHash);
 	mb.reason   = iceString(b.qsReason);
-	mb.start    = static_cast< int >(b.qdtStart.toLocalTime().toTime_t());
+	mb.start    = static_cast< int >(b.qdtStart.toLocalTime().toSecsSinceEpoch());
 	mb.duration = static_cast< int >(b.iDuration);
 }
 
@@ -197,7 +192,7 @@ static void banToBan(const ::MumbleServer::Ban &mb, ::Ban &b) {
 	b.qsUsername = u8(mb.name);
 	b.qsHash     = u8(mb.hash);
 	b.qsReason   = u8(mb.reason);
-	b.qdtStart   = QDateTime::fromTime_t(static_cast< quint32 >(mb.start)).toUTC();
+	b.qdtStart   = QDateTime::fromSecsSinceEpoch(static_cast< quint32 >(mb.start)).toUTC();
 	b.iDuration  = static_cast< unsigned int >(mb.duration);
 }
 
@@ -1487,17 +1482,11 @@ static void impl_Server_setACL(const ::MumbleServer::AMD_Server_setACLPtr cb, in
 			g               = new ::Group(channel, name);
 			g->bInherit     = gi.inherit;
 			g->bInheritable = gi.inheritable;
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
 			QVector< int > addVec(gi.add.begin(), gi.add.end());
 			QVector< int > removeVec(gi.remove.begin(), gi.remove.end());
 
-			g->qsAdd    = QSet< int >(addVec.begin(), addVec.end());
-			g->qsRemove = QSet< int >(removeVec.begin(), removeVec.end());
-#else
-			// Qt 5.14 prefers to use the new range-based constructor for vectors and sets
-			g->qsAdd    = QVector< int >::fromStdVector(gi.add).toList().toSet();
-			g->qsRemove = QVector< int >::fromStdVector(gi.remove).toList().toSet();
-#endif
+			g->qsAdd       = QSet< int >(addVec.begin(), addVec.end());
+			g->qsRemove    = QSet< int >(removeVec.begin(), removeVec.end());
 			g->qsTemporary = hOldTemp.value(name);
 		}
 		foreach (const ::MumbleServer::ACL &ai, acls) {

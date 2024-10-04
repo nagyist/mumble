@@ -1,4 +1,4 @@
-// Copyright 2007-2023 The Mumble Developers. All rights reserved.
+// Copyright The Mumble Developers. All rights reserved.
 // Use of this source code is governed by a BSD-style license
 // that can be found in the LICENSE file at the root of the
 // Mumble source tree or at <https://www.mumble.info/LICENSE>.
@@ -22,7 +22,8 @@
 #	include "GKey.h"
 #endif
 
-#include <codecvt>
+#include "win.h"
+
 #include <iomanip>
 #include <mutex>
 #include <sstream>
@@ -36,6 +37,8 @@ extern "C" {
 #include <hidpi.h>
 // clang-format on
 }
+
+#include <utf8/cpp11.h>
 
 // From os_win.cpp
 extern HWND mumble_mw_hwnd;
@@ -193,25 +196,13 @@ void GlobalShortcutWin::registerMetaTypes() {
 		registered = true;
 
 		qRegisterMetaType< InputHid >();
-		qRegisterMetaTypeStreamOperators< InputHid >();
-		QMetaType::registerComparators< InputHid >();
-
 		qRegisterMetaType< InputKeyboard >();
-		qRegisterMetaTypeStreamOperators< InputKeyboard >();
-		QMetaType::registerComparators< InputKeyboard >();
-
 		qRegisterMetaType< InputMouse >();
-		qRegisterMetaTypeStreamOperators< InputMouse >();
-		QMetaType::registerComparators< InputMouse >();
 #ifdef USE_XBOXINPUT
 		qRegisterMetaType< InputXinput >();
-		qRegisterMetaTypeStreamOperators< InputXinput >();
-		QMetaType::registerComparators< InputXinput >();
 #endif
 #ifdef USE_GKEY
 		qRegisterMetaType< InputGkey >();
-		qRegisterMetaTypeStreamOperators< InputGkey >();
-		QMetaType::registerComparators< InputGkey >();
 #endif
 	}
 }
@@ -629,15 +620,13 @@ GlobalShortcutWin::DeviceMap::iterator GlobalShortcutWin::addDevice(const HANDLE
 				name.clear();
 				name.resize(127);
 
-				std::wstring_convert< std::codecvt_utf8_utf16< wchar_t > > conv;
-
 				if (HidD_GetManufacturerString(handle, &name[0], static_cast< ULONG >(sizeof(wchar_t) * name.size()))) {
-					nameStream << ' ' << conv.to_bytes(name);
+					nameStream << ' ' << utf16To8(name);
 					name.clear();
 				}
 
 				if (HidD_GetProductString(handle, &name[0], static_cast< ULONG >(sizeof(wchar_t) * name.size()))) {
-					nameStream << ' ' << conv.to_bytes(name);
+					nameStream << ' ' << utf16To8(name);
 				}
 
 				CloseHandle(handle);
@@ -893,3 +882,17 @@ GlobalShortcutWin::ButtonInfo GlobalShortcutWin::buttonInfo(const QVariant &butt
 #ifdef _MSVC_LANG
 #	pragma warning(pop)
 #endif
+
+std::string GlobalShortcutWin::utf16To8(const std::wstring &wstr) {
+	if (wstr.empty()) {
+		return {};
+	}
+
+	const std::u16string str16{ wstr.cbegin(), wstr.cend() };
+
+	try {
+		return utf8::utf16to8(str16);
+	} catch (const utf8::invalid_utf16 &) {
+		return {};
+	}
+}

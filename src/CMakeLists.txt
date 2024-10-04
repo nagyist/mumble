@@ -1,4 +1,4 @@
-# Copyright 2020-2023 The Mumble Developers. All rights reserved.
+# Copyright The Mumble Developers. All rights reserved.
 # Use of this source code is governed by a BSD-style license
 # that can be found in the LICENSE file at the root of the
 # Mumble source tree or at <https://www.mumble.info/LICENSE>.
@@ -17,7 +17,8 @@ option(tracy "Enable the tracy profiler." OFF)
 option(bundled-gsl "Use the bundled GSL version instead of looking for one on the system" ON)
 
 
-find_pkg(Qt5
+find_pkg(Qt6
+	VERSION 6.2
 	COMPONENTS
 		Core
 		Network
@@ -176,9 +177,9 @@ target_link_libraries(shared
 		protobuf::libprotobuf
 		OpenSSL::Crypto
 		OpenSSL::SSL
-		Qt5::Core
-		Qt5::Network
-		Qt5::Xml
+		Qt6::Core
+		Qt6::Network
+		Qt6::Xml
 )
 
 if(WIN32)

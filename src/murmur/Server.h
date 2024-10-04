@@ -1,4 +1,4 @@
-// Copyright 2007-2023 The Mumble Developers. All rights reserved.
+// Copyright The Mumble Developers. All rights reserved.
 // Use of this source code is governed by a BSD-style license
 // that can be found in the LICENSE file at the root of the
 // Mumble source tree or at <https://www.mumble.info/LICENSE>.
@@ -32,6 +32,7 @@
 #include <QtCore/QMutex>
 #include <QtCore/QQueue>
 #include <QtCore/QReadWriteLock>
+#include <QtCore/QRegularExpression>
 #include <QtCore/QSocketNotifier>
 #include <QtCore/QStringList>
 #include <QtCore/QThread>
@@ -137,8 +138,8 @@ public:
 	bool bAllowPing;
 	bool allowRecording;
 
-	QRegExp qrUserName;
-	QRegExp qrChannelName;
+	QRegularExpression qrUserName;
+	QRegularExpression qrChannelName;
 
 	unsigned int iMessageLimit;
 	unsigned int iMessageBurst;
@@ -429,7 +430,7 @@ public:
 	/// be returned if the user has write permission in the channel.
 	bool isChannelFull(Channel *c, ServerUser *u = 0);
 
-	// Database / DBus functions. Implementation in ServerDB.cpp
+	// Database. Implementation in ServerDB.cpp
 	void initialize();
 	int authenticate(QString &name, const QString &pw, int sessionId = 0, const QStringList &emails = QStringList(),
 					 const QString &certhash = QString(), bool bStrongCert = false,

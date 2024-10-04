@@ -1,4 +1,4 @@
-# Copyright 2020-2023 The Mumble Developers. All rights reserved.
+# Copyright The Mumble Developers. All rights reserved.
 # Use of this source code is governed by a BSD-style license
 # that can be found in the LICENSE file at the root of the
 # Mumble source tree or at <https://www.mumble.info/LICENSE>.
@@ -106,7 +106,7 @@ foreach(CURRENT_PLUGIN IN LISTS AVAILABLE_PLUGINS)
 
 	if(WIN32)
 		target_compile_definitions(${CURRENT_PLUGIN} PRIVATE "OS_WINDOWS")
-		target_link_libraries(${CURRENT_PLUGIN} user32.lib)
+		target_link_libraries(${CURRENT_PLUGIN} PRIVATE user32.lib)
 
 		# Shared library on Windows (e.g. ".dll")
 		set_target_properties(${CURRENT_PLUGIN} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/plugins")

@@ -1,4 +1,4 @@
-// Copyright 2021-2023 The Mumble Developers. All rights reserved.
+// Copyright The Mumble Developers. All rights reserved.
 // Use of this source code is governed by a BSD-style license
 // that can be found in the LICENSE file at the root of the
 // Mumble source tree or at <https://www.mumble.info/LICENSE>.
@@ -20,6 +20,7 @@
 #include <QtWidgets/QLabel>
 
 #include <algorithm>
+#include <utility>
 
 PluginUpdater::PluginUpdater(QWidget *parent)
 	: QDialog(parent), m_wasInterrupted(false), m_dataMutex(), m_pluginsToUpdate(), m_networkManager(),
@@ -33,7 +34,7 @@ PluginUpdater::~PluginUpdater() {
 
 void PluginUpdater::checkForUpdates() {
 	// Dispatch a thread in which each plugin can check for updates
-	QtConcurrent::run([this]() {
+	std::ignore = QtConcurrent::run([this]() {
 		QMutexLocker lock(&m_dataMutex);
 
 		const QVector< const_plugin_ptr_t > plugins = Global::get().pluginManager->getPlugins();
